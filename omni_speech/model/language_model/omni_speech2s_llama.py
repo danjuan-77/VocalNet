@@ -60,7 +60,7 @@ class OmniSpeech2SLlamaForCausalLM(OmniSpeechLlamaForCausalLM, GenerationWithCTC
         
         # self.enable_streaming = getattr(config, "enable_streaming", False) # streaming
         if hasattr(config, "speech_generator_type"):
-            print(config)
+            # print(config)
             self.tune_speech_generator_only = False
             self.speech_generator = build_speech_generator(config)
         else:
@@ -70,8 +70,8 @@ class OmniSpeech2SLlamaForCausalLM(OmniSpeechLlamaForCausalLM, GenerationWithCTC
             print("config.speech_generator_config:", config.speech_generator_config)
  
             self.initialize_speech_generator(config)
-            print("speech generator config is:")
-            print(config)
+            # print("speech generator config is:")
+            # print(config)
             
         self.reset_streaming_state()
         self.post_init()
