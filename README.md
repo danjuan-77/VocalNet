@@ -669,7 +669,7 @@ Bold indicates the optimal result in each subgroup and underline indicates the s
 
 ## ⚖️ License
 
-This repository is released under the Apache-2.0 license as found in the [LICENSE](LICENCE) file.
+This repository is released under the Apache-2.0 license as found in the [LICENSE](LICENCE/LICENSE) file.
 
 ## 💡 Citation
 If you find our data/model/code/paper helpful, please consider citing our papers 📝 and staring us ⭐️！
