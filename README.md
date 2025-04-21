@@ -117,7 +117,7 @@ After downloading them, organize the data as follows in `./playground/`,
     └── cosyvoice2_tokens
 ```
 
-The speech wave is synthesized with [CosyVoice/CosyVoice2](https://github.com/FunAudioLLM/CosyVoice), and we use CosyVoice 2’s speech tokenizer to extract the speech tokens.
+The speech wave is synthesized with [CosyVoice2](https://github.com/FunAudioLLM/CosyVoice), and we use CosyVoice 2’s speech tokenizer to extract the speech tokens.
 
 
 ### Model Training
