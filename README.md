@@ -155,7 +155,7 @@ SPEECH_ENCODER="./models/speech_encoder/whisper-large-v3"  # Path to the Whisper
 bash scripts/mtp/llama_stage1_s2t.sh
 ```
 
-#### Stage II: Generative Supervised Fine-tuning S2T
+#### Stage II: Generative Supervised Fine-tuning S2S
 1. Path Modification
 
 ```bash
