@@ -41,23 +41,25 @@ def load_pretrained_model(model_path, model_base=None, is_lora=False, s2s=False,
     if use_flash_attn:
         kwargs['attn_implementation'] = 'flash_attention_2'
 
-    if "llama" in model_path.lower():
-        model_cls = OmniSpeech2SLlamaForCausalLM if s2s else OmniSpeechLlamaForCausalLM
-    elif "qwen" in model_path.lower():
-        model_cls = OmniSpeech2SQwen2ForCausalLM if s2s else OmniSpeechQwen2ForCausalLM
-    else:
-        raise ValueError("Unknown model type in model_path. Please include 'llama' or 'qwen' in the model path.")
+    model_cls = OmniSpeech2SLlamaForCausalLM if s2s else OmniSpeechLlamaForCausalLM
+    # if "llama" in model_path.lower():
+    #     model_cls = OmniSpeech2SLlamaForCausalLM if s2s else OmniSpeechLlamaForCausalLM
+    # elif "qwen" in model_path.lower():
+    #     model_cls = OmniSpeech2SQwen2ForCausalLM if s2s else OmniSpeechQwen2ForCausalLM
+    # else:
+    #     raise ValueError("Unknown model type in model_path. Please include 'llama' or 'qwen' in the model path.")
 
     # Load OmniSpeech model
     # pdb.set_trace()
     if is_lora:
         assert model_base is not None, "model_base is required for LoRA models."
-        if "llama" in model_path.lower() or "llama" in model_base.lower():
-            from omni_speech.model.language_model.omni_speech_llama import OmniSpeechConfig
-        elif "qwen" in model_path.lower() or "qwen" in model_base.lower():
-            from omni_speech.model.language_model.omni_speech_qwen2 import OmniSpeechConfig
-        else:
-            raise ValueError("Unknown model type in model_path. Please include 'llama' or 'qwen' in the model path.")
+        from omni_speech.model.language_model.omni_speech_llama import OmniSpeechConfig
+        # if "llama" in model_path.lower() or "llama" in model_base.lower():
+        #     from omni_speech.model.language_model.omni_speech_llama import OmniSpeechConfig
+        # elif "qwen" in model_path.lower() or "qwen" in model_base.lower():
+        #     from omni_speech.model.language_model.omni_speech_qwen2 import OmniSpeechConfig
+        # else:
+        #     raise ValueError("Unknown model type in model_path. Please include 'llama' or 'qwen' in the model path.")
         lora_cfg_pretrained = OmniSpeechConfig.from_pretrained(model_path)
         tokenizer = AutoTokenizer.from_pretrained(model_base, use_fast=False)
         print('Loading OmniSpeech from base model...')
