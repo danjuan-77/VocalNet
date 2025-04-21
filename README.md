@@ -169,14 +169,12 @@ bash scripts/mtp/llama_stage2_s2s.sh
 
 ### Local Infer
 
-1. Model Preparartion
+1. Model Preparartion:
 
 - Download Our Open-source Models: VocalNet-1B from [HuggingFace](https://huggingface.co/VocalNet/VocalNet-1B) or [ModelScope](https://www.modelscope.cn/models/VocalNet/VocalNet-1B), and VocalNet-8B from [HuggingFace](https://huggingface.co/VocalNet/VocalNet-8B) or [ModelScope](https://www.modelscope.cn/models/VocalNet/VocalNet-8B).
 - Download the Whisper model from [HuggingFace](https://huggingface.co/openai/whisper-large-v3) and place it in the `./models/speech_encoder/` directory.
 
-2. CosyVoice Preparartion
-
-We utilize CosyVoice2's flow-matching model to convert VocalNet-generated speech tokens into the final audio waveform.
+2. CosyVoice Preparartion: We utilize CosyVoice2's flow-matching model to convert VocalNet-generated speech tokens into the final audio waveform.
 
 - To infer our VocalNet-1B and VocalNet-8B, you need to download the CosyVoice2-0.5B from [HuggingFace](https://huggingface.co/FunAudioLLM/CosyVoice2-0.5B).
 
