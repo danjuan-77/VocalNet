@@ -82,7 +82,7 @@ pip install flash-attn --no-build-isolation
 - VoicaAssistant-430K from Mini-Omni: &nbsp;&nbsp;[ModelScope]() &nbsp;&nbsp;&nbsp; [HuggingFace](https://huggingface.co/datasets/VocalNet/VoiceAssitant-430K-VocalNet)
 - UltraChat from SLAM-Omni: &nbsp;&nbsp;[ModelScope]() &nbsp;&nbsp;&nbsp; [HuggingFace](https://huggingface.co/datasets/VocalNet/UltraChat-VocalNet)
 
-2. You can also prepare your own dataset to train a speech LLM for specific setting. Here is an example instance of the training json:
+Here's an example of a training data instance in JSON format:
 
 
 ```json
@@ -105,7 +105,19 @@ pip install flash-attn --no-build-isolation
 ]
 
 ```
-The speech wave for both queries and responses can be synthesized with [CosyVoice/CosyVoice2](https://github.com/FunAudioLLM/CosyVoice), and we recommend using CosyVoice2 to extract the response speech tokens.
+
+After downloading them, organize the data as follows in `./playground/`,
+
+```
+├── VoiceAssistant-430K-vocalnet
+│   ├── audios
+│   └── cosyvoice2_tokens
+└── UltraChat-vocalnet
+    ├── audios
+    └── cosyvoice2_tokens
+```
+
+The speech wave is synthesized with [CosyVoice/CosyVoice2](https://github.com/FunAudioLLM/CosyVoice), and we use CosyVoice 2’s speech tokenizer to extract the speech tokens.
 
 
 ### Model Training
