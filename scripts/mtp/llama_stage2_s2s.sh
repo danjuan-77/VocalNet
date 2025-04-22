@@ -1,5 +1,5 @@
 #!/bin/bash
-export PYTHONPATH=$PYTHONPATH:$(pwd)
+
 export WANDB_MODE="offline"
 export TOKENIZERS_PARALLELISM=false
 
