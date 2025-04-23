@@ -218,8 +218,7 @@ class VocalNetModel:
         self.temperature = kwargs.get('temperature', 0)
         self.num_beams = kwargs.get('num_beams', 1)
         self.max_new_tokens = kwargs.get('max_new_tokens', 512)
-        self.top_p = kwargs.get('top_p', 0.1)
-        self.top_p = kwargs.get('top_p', 0.1)
+        self.top_p = kwargs.get('top_p', 0.1))
         self.streaming = kwargs.get('streaming', False)
 
         self.audio_dir = None
