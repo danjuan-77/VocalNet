@@ -183,16 +183,13 @@ class OmniSpeechMetaForCausalLM(ABC):
         speech_encoder = self.get_speech_encoder()
         if speech_encoder is None or speech is None or input_ids.shape[1] == 1:
             check_time = (time.time() - check_start_time) * 1000
-            # print(f"初始检查延时: {check_time:.2f} ms")
             return input_ids, position_ids, attention_mask, past_key_values, None, labels
         check_time = (time.time() - check_start_time) * 1000
-        # print(f"初始检查延时: {check_time:.2f} ms")
 
         # 2. 编码语音
         encode_start_time = time.time()
         speech_features = self.encode_speech(speech, speech_lengths)
         encode_time = (time.time() - encode_start_time) * 1000
-        # print(f"编码语音延时: {encode_time:.2f} ms")
 
         # 3. 处理输入参数（填充 None）
         prep_start_time = time.time()
@@ -208,7 +205,6 @@ class OmniSpeechMetaForCausalLM(ABC):
         if labels is None:
             labels = torch.full_like(input_ids, IGNORE_INDEX)
         prep_time = (time.time() - prep_start_time) * 1000
-        # print(f"处理输入参数延时: {prep_time:.2f} ms")
 
         # 4. 根据注意力掩码移除填充
         mask_start_time = time.time()
@@ -216,7 +212,6 @@ class OmniSpeechMetaForCausalLM(ABC):
         input_ids = [cur_input_ids[cur_attention_mask] for cur_input_ids, cur_attention_mask in zip(input_ids, attention_mask)]
         labels = [cur_labels[cur_attention_mask] for cur_labels, cur_attention_mask in zip(labels, attention_mask)]
         mask_time = (time.time() - mask_start_time) * 1000
-        # print(f"移除填充延时: {mask_time:.2f} ms")
 
         # 5. 处理输入嵌入和标签
         embed_start_time = time.time()
@@ -263,7 +258,6 @@ class OmniSpeechMetaForCausalLM(ABC):
             new_input_embeds.append(cur_new_input_embeds)
             new_labels.append(cur_new_labels)
         embed_time = (time.time() - embed_start_time) * 1000
-        # print(f"处理输入嵌入和标签延时: {embed_time:.2f} ms")
 
         # 6. 截断序列到最大长度
         truncate_start_time = time.time()
@@ -272,7 +266,6 @@ class OmniSpeechMetaForCausalLM(ABC):
             new_input_embeds = [x[:tokenizer_model_max_length] for x in new_input_embeds]
             new_labels = [x[:tokenizer_model_max_length] for x in new_labels]
         truncate_time = (time.time() - truncate_start_time) * 1000
-        # print(f"截断序列延时: {truncate_time:.2f} ms")
 
         # 7. 组合和填充
         combine_start_time = time.time()
@@ -320,12 +313,6 @@ class OmniSpeechMetaForCausalLM(ABC):
         if _position_ids is None:
             position_ids = None
 
-        combine_time = (time.time() - combine_start_time) * 1000
-        # print(f"组合和填充延时: {combine_time:.2f} ms")
-
-        # 总延时
-        total_time = (time.time() - total_start_time) * 1000
-        # print(f"总延时: {total_time:.2f} ms")
 
         return None, position_ids, attention_mask, past_key_values, new_input_embeds, new_labels
         
