@@ -79,8 +79,8 @@ pip install flash-attn --no-build-isolation
 
 1. We provide two re-synthesized datasets for VocalNet training:
 
-- VoicaAssistant-430K from Mini-Omni: &nbsp;&nbsp;[ModelScope]() &nbsp;&nbsp;&nbsp; [HuggingFace](https://huggingface.co/datasets/VocalNet/VoiceAssitant-430K-VocalNet)
-- UltraChat from SLAM-Omni: &nbsp;&nbsp;[ModelScope]() &nbsp;&nbsp;&nbsp; [HuggingFace](https://huggingface.co/datasets/VocalNet/UltraChat-VocalNet)
+- VoicaAssistant-430K from Mini-Omni: &nbsp;&nbsp;[ModelScope](https://modelscope.cn/datasets/VocalNet/VoiceAssistant-430K-vocalnet) &nbsp;&nbsp;&nbsp; [HuggingFace](https://huggingface.co/datasets/VocalNet/VoiceAssistant-430K-vocalnet)
+- UltraChat from SLAM-Omni: &nbsp;&nbsp;[ModelScope](https://modelscope.cn/datasets/VocalNet/UltraChat-vocalnet) &nbsp;&nbsp;&nbsp; [HuggingFace](https://huggingface.co/datasets/VocalNet/UltraChat-vocalnet)
 
 Here's an example of a training data instance in JSON format:
 
