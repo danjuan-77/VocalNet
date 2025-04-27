@@ -9,7 +9,7 @@
 </div>
 
 <p align="center">
-HuggingFace <a href="https://huggingface.co/VocalNet">🤗</a> | ModelScope <a href="https://www.modelscope.cn/organization/VocalNet">🔮</a>  | Paper <a href="https://arxiv.org/abs/2504.04060">📖</a> | Demo <a href="https://mumuyeye.github.io/VocalNet/">🎥</a> 
+HuggingFace <a href="https://huggingface.co/VocalNet">🤗</a> | ModelScope <a href="https://www.modelscope.cn/organization/VocalNet">🔮</a>  | Paper <a href="https://arxiv.org/abs/2504.04060">📖</a> | Demo <a href="https://mumuyeye.github.io/VocalNet/">🎥</a> | WeChat <a href="https://github.com/SJTU-OmniAgent/VocalNet/blob/main/images/Wechatgroup.jpg">💬</a> 
 </p>
 <p align="center">
 Shanghai Jiao Tong University</a>  |  Ant Group</a> 
