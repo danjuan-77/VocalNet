@@ -193,11 +193,9 @@ class OmniSpeech2SLlamaForCausalLM(OmniSpeechLlamaForCausalLM, GenerationWithCTC
                 )
                 lm_loss = llama_output.loss
                 txt_eos_emb = self.get_model().embed_tokens(torch.tensor([[128009]], device=llama_output['hidden_states'][-1].device))
-                ctc_loss = self.speech_generator(llama_output['hidden_states'][-1], labels, tgt_units, txt_eos_emb)
-                if torch.rand(1).item() < 0.1:
-                    print(lm_loss, ctc_loss)
-                # exit(1)
-                loss = lm_loss + ctc_loss * self.config.gen_loss_weight
+                sp_loss = self.speech_generator(llama_output['hidden_states'][-1], labels, tgt_units, txt_eos_emb)
+
+                loss = lm_loss + sp_loss * self.config.gen_loss_weight
         else:
             llama_output = super(OmniSpeechLlamaForCausalLM, self).forward(
                 input_ids=input_ids,
