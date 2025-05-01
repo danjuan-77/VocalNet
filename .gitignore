@@ -188,3 +188,5 @@ eval/backup
 *.tar
 *.zip
 *.txt
+**/__pycache__/
+*.py[cod]
