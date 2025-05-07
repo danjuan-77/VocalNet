@@ -5,7 +5,7 @@ export WANDB_ENTITY="kevin-tutu"
 export WANDB_PROJECT="test"
 export TOKENIZERS_PARALLELISM=false
 
-CHECKPOINT_NAME="llama32-8B-instruct-s2s-mtp-ultravoice-au-test"
+CHECKPOINT_NAME="llama32-8B-instruct-s2s-mtp-ultravoice-emotion-test"
 CHECKPOINT_DIR="./checkpoints/${CHECKPOINT_NAME}"
 BASE_MODEL="/share/nlp/tuwenming/models/VocalNet/VocalNet-8B" 
 DATA_PATH="./playground/ultravoice_emotion_train33375.json"
@@ -42,14 +42,14 @@ deepspeed omni_speech/train/train_mem.py \
     --bf16 True \
     --output_dir "$CHECKPOINT_DIR" \
     --num_train_epochs 3 \
-    --per_device_train_batch_size 1 \
-    --per_device_eval_batch_size 1 \
+    --per_device_train_batch_size 10 \
+    --per_device_eval_batch_size 10 \
     --gradient_accumulation_steps 4 \
     --evaluation_strategy "no" \
     --save_strategy "steps" \
     --save_steps 500 \
     --save_total_limit 1 \
-    --learning_rate 2e-4 \
+    --learning_rate 2e-5 \
     --weight_decay 0. \
     --warmup_ratio 0.03 \
     --lr_scheduler_type "cosine" \
