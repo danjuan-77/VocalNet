@@ -190,6 +190,6 @@ eval/backup
 *.txt
 **/__pycache__/
 *.py[cod]
-utils
+# utils
 playground/
 wandb/
