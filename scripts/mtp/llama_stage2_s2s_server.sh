@@ -1,12 +1,14 @@
 #!/bin/bash
 
-export WANDB_MODE="offline"
+# export WANDB_MODE="offline"
+export WANDB_ENTITY="kevin-tutu"
+export WANDB_PROJECT="test"
 export TOKENIZERS_PARALLELISM=false
 
 CHECKPOINT_NAME="llama32-1B-instruct-s2s-mtp-ultravoice-au-test"
 CHECKPOINT_DIR="./checkpoints/${CHECKPOINT_NAME}"
 BASE_MODEL="/share/nlp/tuwenming/models/VocalNet/VocalNet-1B" 
-DATA_PATH="./playground/ultravoice/ultravoice_accent_AU_5990_test.json"
+DATA_PATH="./playground/ultravoice_emotion_train33375.json"
 SPEECH_FOLDER="./playground/"
 SPEECH_ENCODER="/share/nlp/tuwenming/models/openai/whisper-large-v3"
 
