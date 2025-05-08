@@ -1,39 +1,33 @@
-# test_llama_imports.py
+# test_omni_speech_arch_imports.py
 
 import faulthandler
-faulthandler.enable()  # on segfault, print C/C++ backtrace
+faulthandler.enable()  # 如果出现 segfault，会打印本地 C/C++ 回溯
 
 def test_imports(statements):
     """
-    Execute each import statement in isolation.
-    Stop on Python exception or segmentation fault.
+    Execute each import in its own namespace.
+    Stop on Python exception or real segmentation fault.
     """
     for stmt in statements:
         print(f"🔍 Testing: {stmt}")
         try:
-            # use a fresh namespace to avoid side‑effects
-            exec(stmt, {})
+            exec(stmt, {})  # isolated namespace, no side‑effects
             print("   ✔ Success")
         except Exception as e:
-            print(f"   ✖ Failed with Python exception: {e}")
+            print(f"   ✖ Python exception: {e}")
             return
 
 if __name__ == "__main__":
+    # 从 omni_speech/model/language_model/omni_speech_arch.py 顶层拷贝的导入语句
     imports_to_test = [
-        # Standard library
         "from typing import List, Optional, Tuple, Union",
-        # PyTorch core
         "import torch",
         "import torch.nn as nn",
-        # Transformers pieces (split out to isolate failures)
         "from transformers import AutoConfig",
         "from transformers import AutoModelForCausalLM",
         "from transformers.modeling_outputs import CausalLMOutputWithPast",
         "from transformers.generation.utils import GenerateOutput",
-        # Your local model classes (use absolute path)
-        (
-            "from omni_speech.model.language_model.omni_speech_arch "
-            "import OmniSpeechMetaModel, OmniSpeechMetaForCausalLM"
-        ),
+        # 注意：相对导入需要改为绝对路径
+        "from omni_speech.model.language_model.omni_speech_arch import OmniSpeechMetaModel, OmniSpeechMetaForCausalLM",
     ]
     test_imports(imports_to_test)
