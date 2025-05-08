@@ -19,12 +19,10 @@ import onnxruntime
 import torchaudio.compliance.kaldi as kaldi
 import re
 import argparse
-import inflect
 
-COSYVOICE_MODEL="/share/nlp/tuwenming/models/CosyVoice/CosyVoice2-0.5B-old"     ## CosyVoice2-0.5B  旧版本，使用cosyvoice.yaml而不是cosyvoice2.yaml    i.e. /workspace/CosyVoice/pretrained_models/CosyVoice2-0.5B-VocalNet 
-VOCALNET_MODEL = "/share/nlp/tuwenming/models/VocalNet/VocalNet-1B"    ## VocalNet speech LLM   i.e. ./checkpoints/VocalNet-1B
+COSYVOICE_MODEL="/share/nlp/tuwenming/models/CosyVoice/CosyVoice2-0.5B-old"     ## CosyVoice2-0.5B       i.e. /workspace/CosyVoice/pretrained_models/CosyVoice2-0.5B-VocalNet
+VOCALNET_MODEL = "/share/nlp/tuwenming/models/VocalNet/VocalNet-1B/"    ## VocalNet speech LLM   i.e. ./checkpoints/VocalNet-1B
 PROMPT_SPEECH="./omni_speech/infer/common_voice_en_2586258.wav"   
-# PROMPT_SPEECH="/share/nlp/tuwenming/projects/UltraVoice_dev/data/spk_voice/alloy.wav"
 # COSYVOICE_DIR=""       ## CosyVoice Repo        i.e. /workspace/CosyVoice
 # sys.path.append('{}/third_party/Matcha-TTS'.format(COSYVOICE_DIR))
 
@@ -65,7 +63,6 @@ class SpeechTokenizer:
         else:
             self.zh_tn_model = ZhNormalizer(remove_erhua=False, full_to_half=False)
             self.en_tn_model = EnNormalizer()
-            self.inflect_parser = inflect.engine()
     
     def extract_speech_token(self, speech: torch.Tensor, max_duration_sec: int = 30):
         """
@@ -387,9 +384,9 @@ if __name__ == "__main__":
     parser.add_argument('--s2s', action='store_true', default=False)
     parser.add_argument('--save_dir', default="./generated_audio", required=False)
     args = parser.parse_args()
-    print("Initialized vocalnet")
 
     audio_messages = [{"role": "user", "content": "<speech>","path": args.query_audio}]
+    print("Initialized vocalnet")
     vocalnet = VocalNetModel(VOCALNET_MODEL, s2s=args.s2s)
     vocalnet.__initilize__()
     vocalnet.set_audio_dir(args.save_dir)
