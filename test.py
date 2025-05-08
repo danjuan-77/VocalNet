@@ -1,23 +1,39 @@
-# test_omni_language_models.py
+# test_llama_imports.py
 
 import faulthandler
-faulthandler.enable()  # 如果出现 Segmentation fault，会打印本地 C/C++ 回溯
+faulthandler.enable()  # on segfault, print C/C++ backtrace
 
-# 逐个测试 __init__.py 中导入的四个 language_model 子模块
-language_modules = [
-    "omni_speech.model.language_model.omni_speech_llama",
-    "omni_speech.model.language_model.omni_speech2s_llama",
-    "omni_speech.model.language_model.omni_speech_qwen2",
-    "omni_speech.model.language_model.omni_speech2s_qwen2",
-]
+def test_imports(statements):
+    """
+    Execute each import statement in isolation.
+    Stop on Python exception or segmentation fault.
+    """
+    for stmt in statements:
+        print(f"🔍 Testing: {stmt}")
+        try:
+            # use a fresh namespace to avoid side‑effects
+            exec(stmt, {})
+            print("   ✔ Success")
+        except Exception as e:
+            print(f"   ✖ Failed with Python exception: {e}")
+            return
 
-for module_name in language_modules:
-    print(f"🔍 Testing import: {module_name}")
-    try:
-        __import__(module_name)
-        print(f"  ✔ Success: {module_name}")
-    except Exception as e:
-        # 捕获纯 Python 异常并打印，然后退出
-        print(f"  ✖ Python exception importing {module_name}: {e}")
-        break
-    # 如果是真正的 Segfault，faulthandler 会在这里终止并打印回溯
+if __name__ == "__main__":
+    imports_to_test = [
+        # Standard library
+        "from typing import List, Optional, Tuple, Union",
+        # PyTorch core
+        "import torch",
+        "import torch.nn as nn",
+        # Transformers pieces (split out to isolate failures)
+        "from transformers import AutoConfig",
+        "from transformers import AutoModelForCausalLM",
+        "from transformers.modeling_outputs import CausalLMOutputWithPast",
+        "from transformers.generation.utils import GenerateOutput",
+        # Your local model classes (use absolute path)
+        (
+            "from omni_speech.model.language_model.omni_speech_arch "
+            "import OmniSpeechMetaModel, OmniSpeechMetaForCausalLM"
+        ),
+    ]
+    test_imports(imports_to_test)
