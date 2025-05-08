@@ -1,18 +1,26 @@
-# test_builder_imports.py
-import faulthandler
-faulthandler.enable()
+# test_builder_builder_imports.py
 
+import faulthandler
+faulthandler.enable()  # 如果出现 Segfault，会打印 C/C++ 回溯
+
+# 按 builder.py 中的顺序，逐条测试下面的导入语句
 import_statements = [
+    "import os",
+    "import warnings",
+    "import shutil",
+    "import pdb",
+    "from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig, BitsAndBytesConfig",
     "import torch",
-    "from fairseq.checkpoint_utils import load_model_ensemble_and_task",  # 举例
-    "from transformers import AutoModel",                               # 举例
-    # …把第一步中 grep 出来的每条语句依次加进来
+    "from omni_speech.model import *",
+    "from omni_speech.model.speech_encoder.builder import build_speech_encoder",
 ]
 
 for stmt in import_statements:
+    print(f"🔍 Testing: {stmt}")
     try:
-        exec(stmt)
-        print(f"✔ 成功：{stmt}")
+        exec(stmt, {})  # 在隔离的全局命名空间中执行
+        print("  ✔ Success")
     except Exception as e:
-        print(f"✖ 失败：{stmt} -> {e}")
+        print(f"  ✖ Python error: {e}")
         break
+    # 如果出现 Segmentation fault，faulthandler 会在这里中断并打印回溯
