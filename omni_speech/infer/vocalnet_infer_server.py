@@ -385,9 +385,9 @@ if __name__ == "__main__":
     parser.add_argument('--s2s', action='store_true', default=False)
     parser.add_argument('--save_dir', default="./generated_audio", required=False)
     args = parser.parse_args()
+    print("Initialized vocalnet")
 
     audio_messages = [{"role": "user", "content": "<speech>","path": args.query_audio}]
-    print("Initialized vocalnet")
     vocalnet = VocalNetModel(VOCALNET_MODEL, s2s=args.s2s)
     vocalnet.__initilize__()
     vocalnet.set_audio_dir(args.save_dir)
