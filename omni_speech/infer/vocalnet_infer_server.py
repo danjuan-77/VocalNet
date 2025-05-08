@@ -19,6 +19,7 @@ import onnxruntime
 import torchaudio.compliance.kaldi as kaldi
 import re
 import argparse
+import inflect
 
 COSYVOICE_MODEL="/share/nlp/tuwenming/models/CosyVoice/CosyVoice2-0.5B-old"     ## CosyVoice2-0.5B  旧版本，使用cosyvoice.yaml而不是cosyvoice2.yaml    i.e. /workspace/CosyVoice/pretrained_models/CosyVoice2-0.5B-VocalNet 
 VOCALNET_MODEL = "/share/nlp/tuwenming/models/VocalNet/VocalNet-1B"    ## VocalNet speech LLM   i.e. ./checkpoints/VocalNet-1B
@@ -64,6 +65,7 @@ class SpeechTokenizer:
         else:
             self.zh_tn_model = ZhNormalizer(remove_erhua=False, full_to_half=False)
             self.en_tn_model = EnNormalizer()
+            self.inflect_parser = inflect.engine()
     
     def extract_speech_token(self, speech: torch.Tensor, max_duration_sec: int = 30):
         """
