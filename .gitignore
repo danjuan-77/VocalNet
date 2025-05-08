@@ -193,3 +193,4 @@ eval/backup
 # utils
 playground/
 wandb/
+infer_results/
