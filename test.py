@@ -1,39 +1,18 @@
-# deep_import_test.py
-
+# test_builder_imports.py
 import faulthandler
-faulthandler.enable()  # enable C‑level backtrace on segfault
+faulthandler.enable()
 
-# List of (name, statement) pairs to test
-import_tests = [
-    ("torch",                   "import torch"),
-    ("typing.Tuple",            "from typing import Tuple"),
-    ("omni_speech.builder",     "from omni_speech.model.builder import load_pretrained_model"),
-    ("os",                      "import os"),
-    ("omni_speech.preprocess",  "from omni_speech.datasets.preprocess import preprocess_llama_3_v1"),
-    ("whisper",                 "import whisper"),
-    ("numpy",                   "import numpy as np"),
-    ("sys",                     "import sys"),
-    ("hyperpyyaml",             "from hyperpyyaml import load_hyperpyyaml"),
-    ("functools.partial",       "from functools import partial"),
-    ("file_utils.load_wav",     "from cosyvoice.utils.file_utils import load_wav"),
-    ("CosyVoice2Model",         "from cosyvoice.cli.model import CosyVoice2Model"),
-    ("frontend_utils",          "from cosyvoice.utils.frontend_utils import contains_chinese, replace_blank, replace_corner_mark, remove_bracket, spell_out_number, split_paragraph"),
-    ("logging",                 "import logging"),
-    ("librosa",                 "import librosa"),
-    ("torchaudio",              "import torchaudio"),
-    ("json",                    "import json"),
-    ("onnxruntime",             "import onnxruntime"),
-    ("kaldi",                   "import torchaudio.compliance.kaldi as kaldi"),
-    ("re",                      "import re"),
-    ("argparse",                "import argparse"),
+import_statements = [
+    "import torch",
+    "from fairseq.checkpoint_utils import load_model_ensemble_and_task",  # 举例
+    "from transformers import AutoModel",                               # 举例
+    # …把第一步中 grep 出来的每条语句依次加进来
 ]
 
-for name, stmt in import_tests:
+for stmt in import_statements:
     try:
         exec(stmt)
-        print(f"✔ Success: {stmt}")
+        print(f"✔ 成功：{stmt}")
     except Exception as e:
-        # If a Python exception is raised, we report and stop.
-        print(f"✖ Python error on {stmt}: {e}")
+        print(f"✖ 失败：{stmt} -> {e}")
         break
-    # If a segfault occurs, faulthandler will print a C‑level backtrace and abort here.
