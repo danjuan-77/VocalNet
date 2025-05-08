@@ -21,7 +21,7 @@ import re
 import argparse
 
 COSYVOICE_MODEL="/home/tuwenming/Models/FunAudioLLM/CosyVoice2-0.5B"     ## CosyVoice2-0.5B       i.e. /workspace/CosyVoice/pretrained_models/CosyVoice2-0.5B-VocalNet
-VOCALNET_MODEL = "/home/tuwenming/Models/VocalNet/VocalNet-1B/"    ## VocalNet speech LLM   i.e. ./checkpoints/VocalNet-1B
+VOCALNET_MODEL = "/home/tuwenming/Models/VocalNet/VocalNet-8B/"    ## VocalNet speech LLM   i.e. ./checkpoints/VocalNet-1B
 PROMPT_SPEECH="./omni_speech/infer/common_voice_en_2586258.wav"   
 # COSYVOICE_DIR=""       ## CosyVoice Repo        i.e. /workspace/CosyVoice
 # sys.path.append('{}/third_party/Matcha-TTS'.format(COSYVOICE_DIR))
