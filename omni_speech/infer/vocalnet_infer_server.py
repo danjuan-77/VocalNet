@@ -360,6 +360,8 @@ class VocalNetModel:
             
             if self.s2s:
                 output_units = output_units[:,1:-1]
+                # 打印 speech tokens
+                print("Speech Tokens:", output_units.tolist())
             
         result = {"text": output_text.strip()}
         if not self.s2s:
