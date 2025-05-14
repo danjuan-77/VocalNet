@@ -354,7 +354,10 @@ class VocalNetModel:
                 output_ids = outputs
 
             output_text = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
-
+            
+            # 打印 output_ids
+            print("Output IDs:", output_ids.tolist())
+            
             if self.s2s:
                 output_units = output_units[:,1:-1]
             
