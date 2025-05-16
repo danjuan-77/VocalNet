@@ -322,7 +322,6 @@ class VocalNetModelStream:
         sample_rate = None
         speech_list = []               
 
-        start_time = time.time()   
         with torch.inference_mode():
             if self.s2s:
                 for generated_text_idx, units_pred, is_last_speech_chunk in self.model.streaming_generate_mtp(
@@ -338,7 +337,6 @@ class VocalNetModelStream:
                     speech_token_num = self.speech_token_num,
                     reset_interval=self.reset_interval
                 ):  
-                    token_time = time.time()
                     if generated_text_idx is not None:
                         full_generated_text_idx = torch.cat([full_generated_text_idx, generated_text_idx], dim=-1)
 
@@ -364,8 +362,6 @@ class VocalNetModelStream:
                             speech_list.append(speech)
                             sub_step += 1                        
                         step += 1
-                    print(f"time1: {token_time - start_time}, time2: {time.time() - token_time}")
-                    start_time = time.time()
 
         merged_audio_path = None
         if speech_list:
