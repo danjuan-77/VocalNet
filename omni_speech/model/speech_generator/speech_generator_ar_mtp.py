@@ -523,7 +523,7 @@ class SpeechGeneratorARMTP(nn.Module):
     
             
 
-    def predict_mtp(self, llm_hidden, top_k=1, prefix=None, penalty_window_size=0, penalty=0, max_tokens=2048, infer_mtp_token_num=3):
+    def predict_mtp(self, llm_hidden, top_k=1, prefix=None, penalty_window_size=5, penalty=2, max_tokens=2048, infer_mtp_token_num=3):
         if infer_mtp_token_num > self.mtp_num:
             raise ValueError("mtp_token_num should be less than mtp_num")
         
@@ -634,7 +634,46 @@ class SpeechGeneratorARMTP(nn.Module):
                 if next_token_id == self.eos_token:
                     break
         return generated_tokens
-    def real_streaming_predict_mtp(self, llm_hidden, top_k=1, prefix=None, penalty_window_size=6, penalty=2, max_tokens=2048, infer_mtp_token_num=3):        
+    
+    
+    def merge_caches(self, cache1, cache2):
+        if cache1.get_seq_length() == 0:
+            return copy.deepcopy(cache2)
+        if cache2.get_seq_length() == 0:
+            return copy.deepcopy(cache1)
+
+        legacy_cache1 = cache1.to_legacy_cache()
+        legacy_cache2 = cache2.to_legacy_cache()
+        merged_cache = []
+
+        for layer_cache1, layer_cache2 in zip(legacy_cache1, legacy_cache2):
+            merged_layer_cache = []
+            for tensor1, tensor2 in zip(layer_cache1, layer_cache2):
+                merged_tensor = torch.cat((tensor1.clone(), tensor2.clone()), dim=2)
+                merged_layer_cache.append(merged_tensor)
+            merged_cache.append(tuple(merged_layer_cache))
+
+        return DynamicCache.from_legacy_cache(tuple(merged_cache))
+    
+    def split_cache(self, cache, split_idx):
+        legacy_cache = cache.to_legacy_cache()
+        cache1 = []
+        cache2 = []
+
+        for layer_cache in legacy_cache:
+            layer_cache1 = []
+            layer_cache2 = []
+            for tensor in layer_cache:
+                tensor1 = tensor[:, :, :split_idx, :].clone()
+                tensor2 = tensor[:, :, split_idx:, :].clone()
+                layer_cache1.append(tensor1)
+                layer_cache2.append(tensor2)
+            cache1.append(tuple(layer_cache1))
+            cache2.append(tuple(layer_cache2))
+
+        return DynamicCache.from_legacy_cache(tuple(cache1)), DynamicCache.from_legacy_cache(tuple(cache2))
+    
+    def streaming_predict_mtp(self, llm_hidden, top_k=1, prefix=None, penalty_window_size=6, penalty=2, max_tokens=2048, infer_mtp_token_num=3):        
         if infer_mtp_token_num > self.mtp_num:
             raise ValueError("mtp_token_num should be less than mtp_num")
         
@@ -648,11 +687,15 @@ class SpeechGeneratorARMTP(nn.Module):
             self._mtp_past_key_values = []
             for i in range(infer_mtp_token_num):
                 self._mtp_past_key_values.append(copy.deepcopy(self._speech_decoder_past_key_values))
-            self._all_generated_tokens = torch.full((1, 1), self.sos_token, dtype=torch.long, device=llm_hidden.device)
+            try:
+                self._all_generated_tokens = torch.full((1, 1), self.sos_token, dtype=torch.long, device=llm_hidden.device)
+            except:
+                self._all_generated_tokens = torch.full((1, 1), self.sos_token, dtype=torch.long, device=self._speech_decoder_past_key_values['text'][0][0].device)
         
-        prenn_past_seen_tokens = self._prenn_past_key_values.get_seq_length()
-        prenn_cache_position = torch.arange(prenn_past_seen_tokens, prenn_past_seen_tokens + llm_hidden.shape[1], device=llm_hidden.device)
-        llm_hidden = self.infer_pre_nn(llm_hidden, prenn_cache_position, self._prenn_past_key_values)
+        if llm_hidden is not None:
+            prenn_past_seen_tokens = self._prenn_past_key_values.get_seq_length()
+            prenn_cache_position = torch.arange(prenn_past_seen_tokens, prenn_past_seen_tokens + llm_hidden.shape[1], device=llm_hidden.device)
+            llm_hidden = self.infer_pre_nn(llm_hidden, prenn_cache_position, self._prenn_past_key_values)
         
         if self._speech_decoder_past_key_values['text'].get_seq_length() == 0:
             bos_emb = self.embedding(torch.full((1, 1), self.bos_token, dtype=torch.long, device=llm_hidden.device))
@@ -660,19 +703,30 @@ class SpeechGeneratorARMTP(nn.Module):
             cur_chunk_token = torch.full((1, 1), self.sos_token, dtype=torch.long, device=llm_hidden.device)
             generated_tokens = torch.empty((1, 0), dtype=torch.long, device=llm_hidden.device)
         else:
-            cur_chunk_token = self._all_generated_tokens
-            generated_tokens = torch.empty((1, 0), dtype=torch.long, device=llm_hidden.device)
+            cur_chunk_token = self._all_generated_tokens[:,-1-infer_mtp_token_num:]
+            try:
+                generated_tokens = torch.empty((1, 0), dtype=torch.long, device=self._speech_decoder_past_key_values['text'][0][0].device)
+            except:
+                generated_tokens = torch.empty((1, 0), dtype=torch.long, device=llm_hidden.device)
 
-        speech_decoder_past_seen_tokens_text = self._speech_decoder_past_key_values['text'].get_seq_length()
-        speech_decoder_cache_position = torch.arange(speech_decoder_past_seen_tokens_text, speech_decoder_past_seen_tokens_text + llm_hidden.shape[1], device=llm_hidden.device)
-        llm_hidden_states_passsd = self.transformer_infer(llm_hidden, speech_decoder_cache_position, self._speech_decoder_past_key_values['text'])
-        self._speech_decoder_past_key_values['speech'] = copy.deepcopy(self._speech_decoder_past_key_values['text'])
-        
-        for i in range(infer_mtp_token_num):
-            mtp_past_seen_tokens_text = self._mtp_past_key_values[i]['text'].get_seq_length()
-            cache_position = torch.arange(mtp_past_seen_tokens_text, mtp_past_seen_tokens_text + llm_hidden.shape[1], device=llm_hidden.device)
-            _, _ = self.infer_mtp_layer(self.mtp_layers[i], llm_hidden_states_passsd, cache_position, self._mtp_past_key_values[i]['text'])
-            self._mtp_past_key_values[i]['speech'] = copy.deepcopy(self._mtp_past_key_values[i]['text'])
+        if llm_hidden is not None: 
+            # print(cur_chunk_token.shape, self._all_generated_tokens.shape)
+            speech_decoder_past_seen_tokens_text = self._speech_decoder_past_key_values['text'].get_seq_length()
+            speech_decoder_cache_position = torch.arange(speech_decoder_past_seen_tokens_text, speech_decoder_past_seen_tokens_text + llm_hidden.shape[1], device=llm_hidden.device)
+
+            llm_hidden_states_passsd = self.transformer_infer(llm_hidden, speech_decoder_cache_position, self._speech_decoder_past_key_values['text'])
+            _, previous_speech_past_key_values = self.split_cache(self._speech_decoder_past_key_values['speech'], speech_decoder_past_seen_tokens_text)
+            self._speech_decoder_past_key_values['speech'] = self.merge_caches(copy.deepcopy(self._speech_decoder_past_key_values['text']), previous_speech_past_key_values)
+            # self._speech_decoder_past_key_values['speech'] = copy.deepcopy(self._speech_decoder_past_key_values['text'])
+            
+            for i in range(infer_mtp_token_num):
+                mtp_past_seen_tokens_text = self._mtp_past_key_values[i]['text'].get_seq_length()
+                cache_position = torch.arange(mtp_past_seen_tokens_text, mtp_past_seen_tokens_text + llm_hidden.shape[1], device=llm_hidden.device)
+
+                _, _ = self.infer_mtp_layer(self.mtp_layers[i], llm_hidden_states_passsd, cache_position, self._mtp_past_key_values[i]['text'])
+                _, previous_mpt_speech_past_key_values = self.split_cache(self._mtp_past_key_values[i]['speech'], mtp_past_seen_tokens_text)
+                self._mtp_past_key_values[i]['speech'] = self.merge_caches(copy.deepcopy(self._mtp_past_key_values[i]['text']), previous_mpt_speech_past_key_values)
+                # self._mtp_past_key_values[i]['speech'] = copy.deepcopy(self._mtp_past_key_values[i]['text'])
 
         if self._is_last_chunk:
             cycle_times = math.ceil((max_tokens - self._all_generated_tokens.shape[-1]) / (infer_mtp_token_num + 1))
@@ -686,23 +740,6 @@ class SpeechGeneratorARMTP(nn.Module):
             hidden_states = self.transformer_infer(inputs_embeds, cache_position, self._speech_decoder_past_key_values['speech'])
             norm_hidden_states = self.norm(hidden_states)
             logits = self.output_proj(norm_hidden_states[:,-1,:].unsqueeze(1))
-            
-            # output = logits.squeeze(0).squeeze(0)
-            # probs = torch.nn.functional.softmax(output, dim=-1)
-            # max_prob, max_token = torch.max(probs, dim=0)
-            # entropy_value = entropy(probs.cpu().numpy(), base=2)
-            # timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-
-            # save_dir = "/root/eval/OpenAudioBench/analysis/streaming_results/data"
-            # os.makedirs(save_dir, exist_ok=True)
-            # save_path = os.path.join(save_dir, f"probs_data_{timestamp}.npz")
-
-            # np.savez(save_path, 
-            #         probs=probs.cpu().numpy(), 
-            #         max_prob=max_prob.item(), 
-            #         max_token=max_token.item(), 
-            #         entropy=entropy_value)
-            
             
             for token in set(generated_tokens[0][-penalty_window_size:]):
                 logits[:, :, token] /= penalty
