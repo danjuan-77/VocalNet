@@ -5,9 +5,9 @@ export TOKENIZERS_PARALLELISM=false
 
 CHECKPOINT_NAME="qwen25-7b-s2s-mtp"
 CHECKPOINT_DIR="./checkpoints/${CHECKPOINT_NAME}"
-BASE_MODEL="./checkpoints/qwen25-7b-s2t" 
-DATA_PATH="/root/OmniAgent/VocalNet2/playground/VoiceAssistant-400K/VoiceAssistant-430K-cosy2-2586258-medium.json"
-SPEECH_FOLDER="/root/OmniAgent/VocalNet2/playground/"
+BASE_MODEL="" 
+DATA_PATH=""
+SPEECH_FOLDER=""
 SPEECH_ENCODER="./models/speech_encoder/whisper-large-v3"
 
 # 创建日志目录
