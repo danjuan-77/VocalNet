@@ -193,11 +193,9 @@ class OmniSpeech2SLlamaForCausalLM(OmniSpeechLlamaForCausalLM, GenerationWithCTC
                 )
                 lm_loss = llama_output.loss
                 txt_eos_emb = self.get_model().embed_tokens(torch.tensor([[128009]], device=llama_output['hidden_states'][-1].device))
-                ctc_loss = self.speech_generator(llama_output['hidden_states'][-1], labels, tgt_units, txt_eos_emb)
-                if torch.rand(1).item() < 0.1:
-                    print(lm_loss, ctc_loss)
-                # exit(1)
-                loss = lm_loss + ctc_loss * self.config.gen_loss_weight
+                sp_loss = self.speech_generator(llama_output['hidden_states'][-1], labels, tgt_units, txt_eos_emb)
+
+                loss = lm_loss + sp_loss * self.config.gen_loss_weight
         else:
             llama_output = super(OmniSpeechLlamaForCausalLM, self).forward(
                 input_ids=input_ids,
@@ -312,24 +310,26 @@ class OmniSpeech2SLlamaForCausalLM(OmniSpeechLlamaForCausalLM, GenerationWithCTC
 
 
     @torch.no_grad()
-    def real_streaming_generate_mtp(
+    def streaming_generate_mtp(
         self,
         inputs: Optional[torch.Tensor] = None,
         speech: Optional[torch.Tensor] = None,
         speech_lengths: Optional[torch.Tensor] = None,
         infer_mtp_token_num=0,
-        streaming=False,
-        speculative=False,
         txt_token_num=5,
-        reset_interval=40,  
+        speech_token_num=15,
+        reset_interval=50,  
+        max_len = 512,
         **kwargs,
     ) -> Generator[Tuple[str, Optional[List[torch.Tensor]]], None, None]:
+        self.txt_token_num = txt_token_num
+        self.speech_generator.speech_token_num = speech_token_num
         position_ids = kwargs.pop("position_ids", None)
         attention_mask = kwargs.pop("attention_mask", None)
         if "inputs_embeds" in kwargs:
             raise NotImplementedError("inputs_embeds is not supported")
         first_step = self.past_key_values is None
-        print(f"first_step: {first_step}")
+
         self.speech_generator.reset_streaming_cache()
         self.speech_generator.set_last_chunk(is_last=False)
         if first_step:
@@ -357,104 +357,92 @@ class OmniSpeech2SLlamaForCausalLM(OmniSpeechLlamaForCausalLM, GenerationWithCTC
             current_attention_mask = torch.full([1, 1], True, device=self.last_id_embeds.device)
         
         generated_ids_list = []
+        all_txt_ids = []
         self.units_preds = []
         punctuation_set = ".!?"
         punct_count = 0  
         last_punct_reset = 0  
+        txt_eos_emb = self.get_model().embed_tokens(torch.tensor([[128009]], device=inputs_embeds.device))
 
         while True:
-            token_start_time = time.time()
-            last_id, self.past_key_values, return_tts_state = self._generate_one_step(
-                inputs_embeds=inputs_embeds if first_step else self.last_id_embeds,
-                attention_mask=current_attention_mask,
-                past_key_values=self.past_key_values,
-                **kwargs
-            )
+            if len(all_txt_ids) > max_len:
+                last_id = torch.tensor([[128009]], device=inputs_embeds.device)
+                return_tts_state = txt_eos_emb
+            else:
+                last_id, self.past_key_values, return_tts_state = self._generate_one_step(
+                    inputs_embeds=inputs_embeds if first_step else self.last_id_embeds,
+                    attention_mask=current_attention_mask,
+                    past_key_values=self.past_key_values,
+                    **kwargs
+                )
+                all_txt_ids.append(last_id)
             
             punct_count += 1  
-            txt_eos_emb = self.get_model().embed_tokens(torch.tensor([[128009]], device=return_tts_state.device))
-
             generated_ids_list.append(last_id)
+
             self.cur_hidden_states.append(return_tts_state)
             concat_ids = torch.cat(generated_ids_list, dim=1)
-            decoded_text = self.tokenizer.decode(concat_ids.squeeze(0), skip_special_tokens=True)
-            self.cur_text = decoded_text
+            self.cur_text = self.tokenizer.decode(concat_ids.squeeze(0), skip_special_tokens=True)
 
-            if any(char in punctuation_set for char in self.cur_text):
-                last_punct_index = max(idx for idx, char in enumerate(self.cur_text) if char in punctuation_set)
-                segment_text = self.cur_text[:last_punct_index + 1]
-                segment_ids = self.tokenizer.encode(segment_text, add_special_tokens=False)
-                token_count = len(segment_ids)
+            if self.cur_text and (self.cur_text[-1] in punctuation_set) and (punct_count - last_punct_reset >= reset_interval):
                 accumulated_hidden = torch.cat(self.cur_hidden_states, dim=1)
-                segment_hidden = accumulated_hidden[:, :token_count, :]
 
-                is_last_chunk = False
-                if punct_count - last_punct_reset >= reset_interval:
-                    hidden_for_predict = torch.cat([segment_hidden, txt_eos_emb], dim=1)
-                    print(f"Splicing txt_eos_emb at punct_count={punct_count}, last_reset={last_punct_reset}")
-                    self.speech_generator.set_last_chunk(is_last=True)
-                    is_last_chunk = True
-                else:
-                    hidden_for_predict = segment_hidden  
-                    self.speech_generator.set_last_chunk(is_last=False)
+                hidden_for_predict = torch.cat([accumulated_hidden, txt_eos_emb], dim=1)
+                self.speech_generator.set_last_chunk(is_last=True)
 
-                units_pred = self.speech_generator.real_streaming_predict_mtp(
+                units_pred = self.speech_generator.streaming_predict_mtp(
                     hidden_for_predict, infer_mtp_token_num=infer_mtp_token_num
                 )
                 if units_pred is not None:
                     self.units_preds.append(units_pred)
                 
-                yield segment_text, (
-                    [tensor[:, :-1].clone() for tensor in self.units_preds] if is_last_chunk 
-                    else self.units_preds.copy()
-                ), False
+                yield concat_ids, [tensor[:, :-1].clone() for tensor in self.units_preds], False
                 self.units_preds = []
+                generated_ids_list = []
+                self.cur_hidden_states = []
+                self.cur_text = ""
 
-                remaining_ids = concat_ids[:, token_count:]
-                remaining_text = self.tokenizer.decode(remaining_ids.squeeze(0), skip_special_tokens=True)
-                remaining_hidden = accumulated_hidden[:, token_count:, :]
-                generated_ids_list = [remaining_ids]
-                self.cur_hidden_states = [remaining_hidden]
-                self.cur_text = remaining_text
+                self.speech_generator.reset_streaming_cache()
+                self.speech_generator.set_last_chunk(is_last=False)
+                last_punct_reset = punct_count  
 
-                if punct_count - last_punct_reset >= reset_interval:
-                    print(f"Resetting streaming cache at punct_count={punct_count}, last_reset={last_punct_reset}")
-                    self.speech_generator.reset_streaming_cache()
-                    self.speech_generator.set_last_chunk(is_last=False)
-                    last_punct_reset = punct_count  
-
-            elif len(generated_ids_list) >= txt_token_num:
+            if len(generated_ids_list) >= self.txt_token_num:
                 self.speech_generator.set_last_chunk(is_last=False)
                 accumulated_hidden = torch.cat(self.cur_hidden_states, dim=1)
                 hidden_for_predict = accumulated_hidden  
-                segment_text = self.cur_text
-                units_pred = self.speech_generator.real_streaming_predict_mtp(
+                units_pred = self.speech_generator.streaming_predict_mtp(
                     hidden_for_predict, infer_mtp_token_num=infer_mtp_token_num
                 )
                 if units_pred is not None:
                     self.units_preds.append(units_pred)
-                yield segment_text, self.units_preds.copy(), False
+                yield concat_ids, self.units_preds.copy(), False
                 self.units_preds = []
                 generated_ids_list.clear()
                 self.cur_hidden_states = []
                 self.cur_text = ""
 
             if last_id[0][0] == 128009:
-                print("last_id[0][0] == 128009")
                 self.speech_generator.set_last_chunk(is_last=True)
-                if generated_ids_list:
+                if generated_ids_list and generated_ids_list[0][0][0] != 128009:
                     accumulated_hidden = torch.cat(self.cur_hidden_states, dim=1)
                     hidden_for_predict = torch.cat([accumulated_hidden, txt_eos_emb], dim=1)
-                    segment_text = self.cur_text
-                    units_pred = self.speech_generator.real_streaming_predict_mtp(
+                    units_pred = self.speech_generator.streaming_predict_mtp(
                         hidden_for_predict, infer_mtp_token_num=infer_mtp_token_num
                     )
                     if units_pred is not None:
                         self.units_preds.append(units_pred)
                     
-                    yield segment_text, [tensor[:, :-1].clone() for tensor in self.units_preds], True
-                elif self.units_preds:
+                    yield concat_ids, [tensor[:, :-1].clone() for tensor in self.units_preds], True
+                elif punct_count - last_punct_reset < 2:
+                    yield None, [torch.tensor([[6324, 4137]], device=return_tts_state.device)], True
+                else:
+                    units_pred = self.speech_generator.streaming_predict_mtp(
+                        None, infer_mtp_token_num=infer_mtp_token_num
+                    )
+                    if units_pred is not None:
+                        self.units_preds.append(units_pred)
                     yield None, [tensor[:, :-1].clone() for tensor in self.units_preds], True
+                    
                 break
 
             if self.past_key_values is not None:
@@ -462,6 +450,8 @@ class OmniSpeech2SLlamaForCausalLM(OmniSpeechLlamaForCausalLM, GenerationWithCTC
                 past_len = self.past_key_values[0][0].size(2)
                 current_attention_mask = torch.ones(1, past_len + 1, device=self.last_id_embeds.device)
                 first_step = False
+
+
 
     def prepare_inputs_for_generation(self, input_ids, past_key_values=None,
                                       inputs_embeds=None, **kwargs):

@@ -257,7 +257,8 @@ class LazySupervisedDataset(Dataset):
                  data_args: DataArguments, speech_gen: bool = False, model_version = "llama_3"):
         super(LazySupervisedDataset, self).__init__()
         list_data_dict = json.load(open(data_path, "r"))
-        # list_data_dict = list_data_dict[:32]
+        list_data_dict = list_data_dict[:100]
+        # list_data_dict = list_data_dict[:int(len(list_data_dict)*0.45)]
 
         rank0_print("Formatting inputs...Skip in lazy mode")
         self.tokenizer = tokenizer
@@ -484,6 +485,23 @@ def train(attn_implementation=None):
                     torch_dtype=(torch.bfloat16 if training_args.bf16 else None),
                     **bnb_model_from_pretrained_args
                 )
+        elif "qwen" in model_args.version:
+            if model_args.has_speech_generator:
+                model = OmniSpeech2SQwen2ForCausalLM.from_pretrained(
+                    model_args.model_name_or_path,
+                    cache_dir=training_args.cache_dir,
+                    attn_implementation=attn_implementation,
+                    torch_dtype=(torch.bfloat16 if training_args.bf16 else None),
+                    **bnb_model_from_pretrained_args
+                )
+            else:
+                model = OmniSpeechQwen2ForCausalLM.from_pretrained(
+                    model_args.model_name_or_path,
+                    cache_dir=training_args.cache_dir,
+                    attn_implementation=attn_implementation,
+                    torch_dtype=(torch.bfloat16 if training_args.bf16 else None),
+                    **bnb_model_from_pretrained_args
+                )
     else:
         model = transformers.LlamaForCausalLM.from_pretrained(
             model_args.model_name_or_path,
@@ -634,7 +652,8 @@ def train(attn_implementation=None):
 
     # Prepare data module
     data_module = make_supervised_data_module(tokenizer=tokenizer, data_args=data_args, speech_gen=(model_args.has_speech_generator), model_version=model_args.version )
-
+    # result = data_module['train_dataset'].__getitem__(2)
+    # pdb.set_trace()
     requires_grad_params = [name for name, param in model.named_parameters() if param.requires_grad]
     print(requires_grad_params)
 

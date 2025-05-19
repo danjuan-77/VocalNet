@@ -1,11 +1,11 @@
 import torch
 from typing import Tuple, Callable
 from omni_speech.model.builder import load_pretrained_model
+import sys
 import os
 from omni_speech.datasets.preprocess import preprocess_llama_3_v1, preprocess_qwen_2_5_v1
 import whisper
 import numpy as np
-import sys
 from hyperpyyaml import load_hyperpyyaml
 from functools import partial
 from cosyvoice.utils.file_utils import load_wav
@@ -18,19 +18,18 @@ import json
 import onnxruntime
 import torchaudio.compliance.kaldi as kaldi
 import re
+import time
 import argparse
-from tqdm import tqdm
+import uuid
+import glob
+import pdb
+import subprocess
 
-COSYVOICE_MODEL="/home/tuwenming/Models/FunAudioLLM/CosyVoice2-0.5B"     ## CosyVoice2-0.5B       i.e. /workspace/CosyVoice/pretrained_models/CosyVoice2-0.5B-VocalNet
-VOCALNET_MODEL = "/home/tuwenming/Models/VocalNet/VocalNet-8B/"    ## VocalNet speech LLM   i.e. ./checkpoints/VocalNet-1B
-PROMPT_SPEECH="./omni_speech/infer/common_voice_en_2586258.wav"   
-# COSYVOICE_DIR=""       ## CosyVoice Repo        i.e. /workspace/CosyVoice
-# sys.path.append('{}/third_party/Matcha-TTS'.format(COSYVOICE_DIR))
-
-COSYVOICE_MODEL=""   ## CosyVoice2-0.5B       i.e. /workspace/CosyVoice/pretrained_models/CosyVoice2-0.5B-VocalNet
-VOCALNET_MODEL = ""
+COSYVOICE_MODEL=""     ## CosyVoice2-0.5B       i.e. /workspace/CosyVoice/pretrained_models/CosyVoice2-0.5B-VocalNet
+VOCALNET_MODEL = ""    ##  /root/speechllm_checkpoints/VocalNet-qwen25-7B  VocalNet speech LLM   i.e. ./checkpoints/VocalNet-1B
+PROMPT_SPEECH="./omni_speech/infer/cn_prompt.wav"   
 # PROMPT_SPEECH="./omni_speech/infer/common_voice_en_2586258.wav"   
-PROMPT_SPEECH="./omni_speech/infer/cn_prompt.wav"   ## common_voice_en_2586258.wav
+
 try:
     import ttsfrd
     use_ttsfrd = True
@@ -185,21 +184,9 @@ class CosyvoiceVocoder:
         self.model = model
         self.sample_rate = sample_rate
 
-    def inference_zero_shot(self, speech_token, prompt_token: torch.Tensor, prompt_feat: torch.Tensor, embedding: torch.Tensor, stream=False, speed=1.0):
-        if speech_token.dim() == 3 and speech_token.size(1) == 1:
-            speech_token = speech_token.squeeze(1)
-            logging.debug(f"Adjusted speech_token shape: {speech_token.shape}, dim: {speech_token.dim()}")
-        elif speech_token.dim() != 2:
-            raise ValueError(f"The dimension of speech_token should be 2D, but got {speech_token.dim()}D")
-
-        if prompt_token.dim() == 3 and prompt_token.size(1) == 1:
-            prompt_token = prompt_token.squeeze(1)
-            logging.debug(f"Adjusted prompt_token shape: {prompt_token.shape}, dim: {prompt_token.dim()}")
-        elif prompt_token.dim() != 2:
-            raise ValueError(f"The dimension of prompt_token should be 2D, but got {prompt_token.dim()}D")
-
-        if prompt_feat.dim() != 3:
-            raise ValueError(f"The dimension of prompt_feat should be 3D, but got {prompt_feat.dim()}D")
+    def inference_zero_shot(self, speech_token, prompt_token: torch.Tensor, prompt_feat: torch.Tensor, embedding: torch.Tensor, stream=False, speed=1.0, uuid=None, is_last_speech_chunk=False):
+        speech_token = speech_token.squeeze(1) if speech_token.dim() == 3 else speech_token
+        prompt_token = prompt_token.squeeze(1) if prompt_token.dim() == 3 else prompt_token
 
         model_input = {
             'speech_tokens': speech_token,
@@ -207,32 +194,40 @@ class CosyvoiceVocoder:
             'prompt_token': prompt_token,
             'prompt_feat': prompt_feat,
             'stream': stream,
-            'speed': speed
+            'speed': speed,
+            'uuid': uuid,
+            'is_last_speech_chunk': is_last_speech_chunk
         }
 
-        for model_output in self.model.tts_direct(**model_input):
+        for model_output in self.model.tts_direct_update(**model_input):
             yield model_output
 
-class VocalNetModel:
+class VocalNetModelStream:
     def __init__(self, model_name_or_path: str, vocoder_path: str = COSYVOICE_MODEL, s2s: bool = True, **kwargs):
         self.s2s = s2s
         self.model_name_or_path = model_name_or_path
         self.empty = True
         self.vocoder_path = vocoder_path
 
-        self.temperature = kwargs.get('temperature', 0)
+        self.temperature = kwargs.get('temperature', 0.1)
         self.num_beams = kwargs.get('num_beams', 1)
         self.max_new_tokens = kwargs.get('max_new_tokens', 512)
         self.top_p = kwargs.get('top_p', 0.1)
+        self.top_p = kwargs.get('top_k', 0.0)
         self.streaming = kwargs.get('streaming', False)
 
         self.audio_dir = None
         self.empty = True
 
+        self.txt_token_num = kwargs.get('txt_token_num', 5)
+        self.speech_token_num = kwargs.get('speech_token_num', 15)
+        self.reset_interval = kwargs.get('reset_interval', 50)
+
     def __initilize__(self):
         if self.empty:
             self.empty = False
             self.tokenizer, self.model, _ = load_pretrained_model(self.model_name_or_path, s2s=self.s2s)
+            self.model.tokenizer = self.tokenizer
             self.__init_vocoder__()
 
 
@@ -291,32 +286,23 @@ class VocalNetModel:
         speech = torch.concat([speech, torch.zeros(1, int(24000 * 0.2))], dim=1)
         return speech
 
-    def set_audio_dir(self, audio_dir):
-        self.audio_dir = audio_dir
+    def set_audio_dir(self, output_dir):
+        self.audio_dir = output_dir
 
+    def __call__(self, messages: list):
+        wav_file = messages[0]['path']
 
-    def __call__(self, messages: list) -> str:
-        """
-        "infer_messages": [[{'role': 'user', 'content': '<speech>', 'path': ./OpenAudioBench/eval_datas/alpaca_eval/audios/alpaca_eval_198.mp3'}]
-        """
+        global_uuid = str(uuid.uuid1())
+        speech = whisper.load_audio(wav_file)
 
-        audio_path = messages[0]['path']
-        speech = whisper.load_audio(audio_path)
-        
-        if self.model.config.speech_encoder_type == "glm4voice":
-            speech_length = torch.LongTensor([speech.shape[0]])
-            speech = torch.from_numpy(speech)
-            speech = torch.nn.functional.layer_norm(speech, speech.shape)
-        else:
-            raw_len = len(speech)
-            speech = whisper.pad_or_trim(speech)
-            padding_len = len(speech)
-            speech = whisper.log_mel_spectrogram(speech, n_mels=128).permute(1, 0).unsqueeze(0)
-            speech_length = round(raw_len / padding_len * 3000 + 0.5)
-            speech_length = torch.LongTensor([speech_length])
-        
-        conversation = [{"from": "human", "value": "<speech>", "path": f"{audio_path}"}]
-        
+        raw_len = len(speech)
+        speech = whisper.pad_or_trim(speech)
+        padding_len = len(speech)
+        speech = whisper.log_mel_spectrogram(speech, n_mels=128).permute(1, 0).unsqueeze(0)
+        speech_length = round(raw_len / padding_len * 3000 + 0.5)
+        speech_length = torch.LongTensor([speech_length])
+
+        conversation = [{"from": "human", "value": "<speech>", "path": f"{wav_file}"}]
         if 'qwen' in self.model_name_or_path.lower():
             input_ids = preprocess_qwen_2_5_v1([conversation], self.tokenizer, True, 4096)['input_ids']
             input_ids = torch.cat([input_ids.squeeze(), torch.tensor([198, 151644, 77091, 198], device=input_ids.device)]).unsqueeze(0)
@@ -324,84 +310,87 @@ class VocalNetModel:
             input_ids = preprocess_llama_3_v1([conversation], self.tokenizer, True, 4096)['input_ids']
             input_ids = torch.cat([input_ids.squeeze(), torch.tensor([128006, 78191, 128007, 271], device=input_ids.device)]).unsqueeze(0)
 
-        
+
         input_ids = input_ids.to(device='cuda', non_blocking=True)
         speech_tensor = speech.to(dtype=torch.float16, device='cuda', non_blocking=True)
         speech_length = speech_length.to(device='cuda', non_blocking=True)
-        speedup_ratio = None
+
+        step = 0
+        full_generated_text_idx = torch.empty([1,0], device='cuda', dtype=torch.int64)
+        self.model.reset_streaming_state()
+   
+        sample_rate = None
+        speech_list = []               
+
         with torch.inference_mode():
             if self.s2s:
-                outputs = self.model.generate(
+                for generated_text_idx, units_pred, is_last_speech_chunk in self.model.streaming_generate_mtp(
                     input_ids,
                     speech=speech_tensor,
                     speech_lengths=speech_length,
-                    do_sample=True if self.temperature > 0 else False,
-                    temperature=self.temperature,
-                    top_p=self.top_p if self.top_p is not None else 0.0,
-                    num_beams=self.num_beams,
-                    max_new_tokens=self.max_new_tokens,
+                    temperature=0.1,
+                    top_p=0.1,
+                    top_k=0,
                     use_cache=True,
-                    pad_token_id=128004,
-                    streaming_unit_gen=False,
                     infer_mtp_token_num=2,
-                    streaming = False,
-                )
-                output_ids, output_units = outputs
-            else:
-                outputs = self.model.generate(
-                    input_ids,
-                    speech=speech_tensor,
-                    speech_lengths=speech_length,
-                    do_sample=True if self.temperature > 0 else False,
-                    temperature=self.temperature,
-                    top_p=self.top_p if self.top_p is not None else 0.0,
-                    num_beams=self.num_beams,
-                    max_new_tokens=self.max_new_tokens,
-                    use_cache=True,
-                    pad_token_id=128004,
-                )
-                output_ids = outputs
+                    txt_token_num=self.txt_token_num,
+                    speech_token_num = self.speech_token_num,
+                    reset_interval=self.reset_interval
+                ):  
+                    if generated_text_idx is not None:
+                        full_generated_text_idx = torch.cat([full_generated_text_idx, generated_text_idx], dim=-1)
 
-            output_text = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
+                    for unit_tensor in units_pred:
+                        sub_step = 0
+                        output_units = unit_tensor
+                        
+                        for output in self.cosy_vocoder.inference_zero_shot(
+                            speech_token=output_units,
+                            prompt_token=self.prompt_token,
+                            prompt_feat=self.speech_feat,
+                            embedding=self.embedding,
+                            stream=True,
+                            speed=1,
+                            uuid=global_uuid,
+                            is_last_speech_chunk=is_last_speech_chunk
+                        ):
+                            speech = output['tts_speech']
 
-            if self.s2s:
-                output_units = output_units[:,1:-1]
-            
-        result = {"text": output_text.strip()}
-        if not self.s2s:
-            return result
+                            if sample_rate is None:
+                                sample_rate = self.cosy_vocoder.sample_rate
+
+                            speech_list.append(speech)
+                            sub_step += 1                        
+                        step += 1
+
+        merged_audio_path = None
+        if speech_list:
+            base_name = os.path.basename(wav_file).replace('mp3', 'wav')
+            merged_audio_path = os.path.join(self.audio_dir, base_name)
+            final_speech = torch.cat(speech_list, dim=-1)
+            torchaudio.save(merged_audio_path, final_speech.cpu(), sample_rate)
         
-        if not self.streaming:
-            for output in self.cosy_vocoder.inference_zero_shot(
-                speech_token=output_units,
-                prompt_token=self.prompt_token,
-                prompt_feat=self.speech_feat,
-                embedding=self.embedding,
-                stream=self.streaming,
-                speed=1
-            ):
-                speech = output['tts_speech']
-                base_name = os.path.basename(audio_path)
-                audio_file = os.path.join(self.audio_dir, f"{base_name.replace('.mp3', '.wav')}")
-                torchaudio.save(audio_file, speech.cpu(), self.cosy_vocoder.sample_rate)
+        self.cosy_vocoder.model.reset_state(global_uuid)
+        full_generated_text = self.tokenizer.decode(full_generated_text_idx[0].cpu().numpy(), skip_special_tokens=True)
+        return {"text": full_generated_text.strip(), 'audio': merged_audio_path} 
 
-        result['audio'] = audio_file
-        return result
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='VocalNet infer')
-    parser.add_argument('--query_audio', type = str, default="./omni_speech/infer/llama_questions_42.wav")
-    parser.add_argument('--s2s', action='store_true', default=False)
-    parser.add_argument('--save_dir', default="./generated_audio", required=False)
+    parser.add_argument('--query_audio', type = str, default="./omni_speech/infer/alpaca_cn_query.wav")
+    parser.add_argument('--s2s', action='store_true', default=True)
+    parser.add_argument('--save_dir', default="./generated_audio")
     args = parser.parse_args()
 
     audio_messages = [{"role": "user", "content": "<speech>","path": args.query_audio}]
     print("Initialized vocalnet")
-    vocalnet = VocalNetModel(VOCALNET_MODEL, s2s=args.s2s)
+    vocalnet = VocalNetModelStream(VOCALNET_MODEL, s2s=args.s2s)
     vocalnet.__initilize__()
     vocalnet.set_audio_dir(args.save_dir)
 
     response = vocalnet.__call__(audio_messages)
     print(response)
 
-    
+

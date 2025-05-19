@@ -5,6 +5,7 @@ from transformers import AutoConfig, AutoModelForCausalLM, Qwen2Config, Qwen2Mod
 from transformers.modeling_outputs import CausalLMOutputWithPast
 from transformers.generation.utils import GenerateOutput
 from ..omni_speech_arch import OmniSpeechMetaModel, OmniSpeechMetaForCausalLM
+import pdb
 
 class OmniSpeechConfig(Qwen2Config):
     model_type = "omni_speech_qwen"
@@ -21,7 +22,6 @@ class OmniSpeechQwen2ForCausalLM(Qwen2ForCausalLM, OmniSpeechMetaForCausalLM):
     def __init__(self, config: Qwen2Config):
         super(Qwen2ForCausalLM, self).__init__(config)
         self.model = OmniSpeechQwen2Model(config)
-        # self.pretraining_tp = config.pretraining_tp
         self.vocab_size = config.vocab_size
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
@@ -65,7 +65,7 @@ class OmniSpeechQwen2ForCausalLM(Qwen2ForCausalLM, OmniSpeechMetaForCausalLM):
                 speech_lengths
             )
 
-        return super().forward(
+        result = super().forward(
             input_ids=input_ids,
             attention_mask=attention_mask,
             position_ids=position_ids,
@@ -77,6 +77,8 @@ class OmniSpeechQwen2ForCausalLM(Qwen2ForCausalLM, OmniSpeechMetaForCausalLM):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict
         )
+        # pdb.set_trace()
+        return result
 
     @torch.no_grad()
     def generate(
@@ -90,7 +92,7 @@ class OmniSpeechQwen2ForCausalLM(Qwen2ForCausalLM, OmniSpeechMetaForCausalLM):
         attention_mask = kwargs.pop("attention_mask", None)
         if "inputs_embeds" in kwargs:
             raise NotImplementedError("`inputs_embeds` is not supported")
-
+        
         if speech is not None:
             (
                 inputs,
@@ -111,12 +113,14 @@ class OmniSpeechQwen2ForCausalLM(Qwen2ForCausalLM, OmniSpeechMetaForCausalLM):
         else:
             inputs_embeds = self.get_model().embed_tokens(inputs)
 
-        return super().generate(
+        result = super().generate(
             position_ids=position_ids,
             attention_mask=attention_mask,
             inputs_embeds=inputs_embeds,
             **kwargs
         )
+        # pdb.set_trace()
+        return result
 
     def prepare_inputs_for_generation(self, input_ids, past_key_values=None,
                                       inputs_embeds=None, **kwargs):
@@ -182,9 +186,9 @@ class OmniSpeechQwen2ForCausalLM(Qwen2ForCausalLM, OmniSpeechMetaForCausalLM):
         inputs_embeds: torch.LongTensor,
         attention_mask: Optional[torch.Tensor] = None,
         past_key_values: Optional[List[torch.FloatTensor]] = None,
-        temperature: float = 1.0,
+        temperature: float = 0.0,
         top_k: int = 0,
-        top_p: float = 1.0,
+        top_p: float = 0.1,
         **kwargs
     ) -> Tuple[torch.LongTensor, List[torch.FloatTensor]]:
         """
@@ -203,7 +207,6 @@ class OmniSpeechQwen2ForCausalLM(Qwen2ForCausalLM, OmniSpeechMetaForCausalLM):
         - past_key_values: The model's historical key-value pairs, used for cross-step memory.
         - hidden_state: The model's hidden state, used to maintain cross-step contextual information.
         """
-        import pdb
         outputs = self.forward(
             inputs_embeds=inputs_embeds,
             attention_mask=attention_mask,
@@ -215,10 +218,6 @@ class OmniSpeechQwen2ForCausalLM(Qwen2ForCausalLM, OmniSpeechMetaForCausalLM):
         last_id = self._post_decode(last_logit, temperature=temperature, top_k=top_k, top_p=top_p)
         return_tts_state = last_hidden_state[:, -1:, :]
         return last_id, outputs['past_key_values'], return_tts_state
-        # if last_id[0][0] == 151643: # end of text(与qwen2保持一致，改用其他模型需要对应修改)
-        #     return None, outputs['past_key_values'], return_tts_state
-        # else:
-        #     return last_id, outputs['past_key_values'], return_tts_state
 
 
 AutoConfig.register("omni_speech_qwen", OmniSpeechConfig)
