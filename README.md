@@ -17,6 +17,11 @@ Shanghai Jiao Tong University</a>  |  Ant Group</a>
 
 <div align="center"><img src="images/VocalNet.png" width="25%"/></div>
 
+## 🔥 News
+- **[25/05]** 🎉 We have released the training code and pretrained model weights for **VocalNet-qwen25-7B**, based on Qwen2.5. Additionally, we've updated the streaming inference code.
+- **[25/04]** 🎉 **VocalNet is here!** Check out our released code, model, and datasets.  
+
+
 ## 👀 VocalNet Overview
 
 **VocalNet** is a series of high performance, low-latency speech LLMs enabled by a scalable and model-agnostic training framework for real-time voice interaction. VocalNet introduces **multi-token prediction (MTP)**, a novel approach optimized for speech LLMs that simultaneously improves generation speed and quality. VocalNet outperforms many mainstream Omni LLMs and existing open-source speech LLMs despite using significantly less training data. 
@@ -24,6 +29,8 @@ Shanghai Jiao Tong University</a>  |  Ant Group</a>
 - **VocalNet-1B**: Built upon [LLaMA-3.2-1B-Instruct](https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct). With much fewer model parameters, VocalNet-1B achieves performance comparable to mainstream speech LLMs, including LLaMA-Omni, Freeze-Omni, and GLM-4-Voice.
 
 - **VocalNet-8B**: Built upon [LLaMA-3.1-8B-Instruct](https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct). In the evaluation of speech interaction models, VocalNet-8B significantly outperforms most mainstream speech LLMs and Omni LLMs.
+
+- **VocalNet-Qwen25-7B**: Built upon [Qwen2.5-7B-Instruct](https://huggingface.co/Qwen/Qwen2.5-7B-Instruct). The model enables natural voice interactions in both English and Chinese, with seamless bilingual capabilities.
 
 <details>
 
@@ -205,8 +212,9 @@ VOCALNET_MODEL = ""    ## VocalNet speech LLM   i.e. ./checkpoints/VocalNet-1B
 python3 omni_speech/infer/vocalnet.py --query_audio ./omni_speech/infer/llama_questions_42.wav 
 ## stage 2 infer (s2s)
 python3 omni_speech/infer/vocalnet.py --query_audio ./omni_speech/infer/llama_questions_42.wav --s2s --save_dir ./
+## stage 2 streaming infer (s2s)
+python3 omni_speech/infer/vocalnet_streaming.py --query_audio ./omni_speech/infer/llama_questions_42.wav --s2s --save_dir ./
 ```
-
 
 
 
