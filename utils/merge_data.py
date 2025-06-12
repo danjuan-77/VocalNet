@@ -4,7 +4,7 @@ import random
 
 # 定义文件夹路径和目标文件
 source_folder = './playground/ultravoice/'
-target_file_template = './ultravoice_all_train_{}.json'
+target_file_template = './playground/ultravoice_all_train_{}.json'
 
 # 获取所有包含train的JSON文件
 train_files = [f for f in os.listdir(source_folder) if 'train' in f and f.endswith('.json')]
