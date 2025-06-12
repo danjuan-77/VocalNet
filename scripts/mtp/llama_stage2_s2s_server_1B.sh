@@ -5,9 +5,9 @@ export WANDB_ENTITY="kevin-tutu"
 export WANDB_PROJECT="vocalnet-sft"
 export TOKENIZERS_PARALLELISM=false
 
-CHECKPOINT_NAME="llama32-8B-instruct-s2s-mtp-ultravoice-all-sft"
+CHECKPOINT_NAME="llama32-1B-instruct-s2s-mtp-ultravoice-all-sft"
 CHECKPOINT_DIR="./checkpoints/${CHECKPOINT_NAME}"
-BASE_MODEL="/share/nlp/tuwenming/models/VocalNet/VocalNet-8B" 
+BASE_MODEL="/share/nlp/tuwenming/models/VocalNet/VocalNet-1B" 
 DATA_PATH="./playground/ultravoice_all_train_104663.json"
 SPEECH_FOLDER="./playground/"
 SPEECH_ENCODER="/share/nlp/tuwenming/models/openai/whisper-large-v3"
