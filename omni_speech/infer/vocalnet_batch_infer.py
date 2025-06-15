@@ -19,6 +19,7 @@ import onnxruntime
 import torchaudio.compliance.kaldi as kaldi
 import re
 import argparse
+from tqdm import tqdm
 
 COSYVOICE_MODEL="/share/nlp/tuwenming/models/CosyVoice/CosyVoice2-0.5B-old"     ## CosyVoice2-0.5B       i.e. /workspace/CosyVoice/pretrained_models/CosyVoice2-0.5B-VocalNet
 VOCALNET_MODEL = "/share/nlp/tuwenming/projects/VocalNet/checkpoints/llama32-1B-instruct-s2s-mtp-ultravoice-all-sft/checkpoint-28794"    ## VocalNet speech LLM   i.e. ./checkpoints/VocalNet-1B
@@ -291,7 +292,7 @@ class VocalNetModel:
         self.audio_dir = audio_dir
 
 
-    def __call__(self, messages: list) -> str:
+    def __call__(self, messages: list, output_filename: str = None) -> str:
         """
         "infer_messages": [[{'role': 'user', 'content': '<speech>', 'path': ./OpenAudioBench/eval_datas/alpaca_eval/audios/alpaca_eval_198.mp3'}]
         """
@@ -355,13 +356,13 @@ class VocalNetModel:
 
             output_text = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
             
-            # 打印 output_ids
-            print("Output IDs:", output_ids.tolist())
+            # # 打印 output_ids
+            # print("Output IDs:", output_ids.tolist())
             
-            if self.s2s:
-                output_units = output_units[:,1:-1]
-                # 打印 speech tokens
-                print("Speech Tokens:", output_units.tolist())
+            # if self.s2s:
+            #     output_units = output_units[:,1:-1]
+            #     # 打印 speech tokens
+            #     print("Speech Tokens:", output_units.tolist())
             
         result = {"text": output_text.strip()}
         if not self.s2s:
@@ -377,8 +378,11 @@ class VocalNetModel:
                 speed=1
             ):
                 speech = output['tts_speech']
-                base_name = os.path.basename(audio_path)
-                audio_file = os.path.join(self.audio_dir, f"{base_name.replace('.mp3', '.wav')}")
+                if output_filename:
+                    audio_file = os.path.join(self.audio_dir, output_filename)
+                else:
+                    base_name = os.path.basename(audio_path)
+                    audio_file = os.path.join(self.audio_dir, f"{base_name.replace('.mp3', '.wav')}")
                 torchaudio.save(audio_file, speech.cpu(), self.cosy_vocoder.sample_rate)
 
         result['audio'] = audio_file
@@ -415,8 +419,13 @@ if __name__ == "__main__":
         error_count = 0
         
         try:
+            # 先计算总行数
             with open(args.test_jsonl, 'r', encoding='utf-8') as f:
-                for line_num, line in enumerate(f, 1):
+                total_lines = sum(1 for _ in f)
+            
+            # 进行批处理
+            with open(args.test_jsonl, 'r', encoding='utf-8') as f:
+                for line_num, line in enumerate(tqdm(f, total=total_lines, desc="批处理推理"), 1):
                     try:
                         data = json.loads(line.strip())
                         
@@ -444,9 +453,17 @@ if __name__ == "__main__":
                         # 构建消息
                         audio_messages = [{"role": "user", "content": "<speech>", "path": full_wav_path}]
                         
+                        # 构建输出文件名
+                        try:
+                            output_filename = f"{data['split_type']}_{data['sub_type']}_{data['data_source']}_{data['index']}.wav"
+                        except KeyError as e:
+                            print(f"警告: 第{line_num}行缺少必要字段 {e}，使用默认文件名")
+                            base_name = os.path.basename(full_wav_path)
+                            output_filename = f"{base_name.replace('.mp3', '.wav').replace('.wav', '')}_output.wav"
+                        
                         # 进行推理
                         try:
-                            response = vocalnet.__call__(audio_messages)
+                            response = vocalnet.__call__(audio_messages, output_filename=output_filename)
                             
                             processed_count += 1
                             
