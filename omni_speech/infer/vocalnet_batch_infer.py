@@ -318,7 +318,7 @@ class VocalNetModel:
         input_ids = torch.cat([input_ids.squeeze(), torch.tensor([128006, 78191, 128007, 271], device=input_ids.device)]).unsqueeze(0)
 
         input_ids = input_ids.to(device='cuda', non_blocking=True)
-        speech_tensor = speech.to(dtype=torch.float16, device='cuda', non_blocking=True)
+        speech_tensor = speech.to(dtype=torch.bfloat16, device='cuda', non_blocking=True)
         speech_length = speech_length.to(device='cuda', non_blocking=True)
         speedup_ratio = None
         with torch.inference_mode():
