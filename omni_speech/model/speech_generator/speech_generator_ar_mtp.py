@@ -454,6 +454,7 @@ class SpeechGeneratorARMTP(nn.Module):
     
 
     def transformer_infer(self, inputs_embeds, cache_position, past_key_values):
+        pdb.set_trace()
         position_ids = cache_position.unsqueeze(0)
         hidden_states = inputs_embeds
         position_embeddings = self.rotary_emb(hidden_states, position_ids)
