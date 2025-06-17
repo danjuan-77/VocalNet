@@ -523,7 +523,7 @@ class SpeechGeneratorARMTP(nn.Module):
     
             
 
-    def predict_mtp(self, llm_hidden, top_k=3, prefix=None, penalty_window_size=5, penalty=2, max_tokens=2048, infer_mtp_token_num=3): # use penalty to control decode strategy
+    def predict_mtp(self, llm_hidden, top_k=3, prefix=None, penalty_window_size=0, penalty=0, max_tokens=2048, infer_mtp_token_num=3): # use penalty to control decode strategy
         if infer_mtp_token_num > self.mtp_num:
             raise ValueError("mtp_token_num should be less than mtp_num")
         
