@@ -454,7 +454,6 @@ class SpeechGeneratorARMTP(nn.Module):
     
 
     def transformer_infer(self, inputs_embeds, cache_position, past_key_values):
-        pdb.set_trace()
         position_ids = cache_position.unsqueeze(0)
         hidden_states = inputs_embeds
         position_embeddings = self.rotary_emb(hidden_states, position_ids)
@@ -527,7 +526,7 @@ class SpeechGeneratorARMTP(nn.Module):
     def predict_mtp(self, llm_hidden, top_k=3, prefix=None, penalty_window_size=0, penalty=0, max_tokens=2048, infer_mtp_token_num=3): # use penalty to control decode strategy
         if infer_mtp_token_num > self.mtp_num:
             raise ValueError("mtp_token_num should be less than mtp_num")
-        
+        pdb.set_trace()
         # Pass through pre_nn
         llm_hidden = self.pre_nn_forward(llm_hidden, [llm_hidden.size(1)])
         bos_emb = self.embedding(torch.full((1, 1), self.bos_token, dtype=torch.long, device=llm_hidden.device))
