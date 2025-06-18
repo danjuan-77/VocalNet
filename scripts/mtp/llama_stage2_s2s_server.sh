@@ -47,7 +47,7 @@ deepspeed omni_speech/train/train_mem.py \
     --gradient_accumulation_steps 4 \
     --evaluation_strategy "no" \
     --save_strategy "steps" \
-    --save_steps 10000 \
+    --save_steps 1000 \
     --save_total_limit 10 \
     --learning_rate 2e-4 \
     --weight_decay 0. \
