@@ -42,13 +42,13 @@ deepspeed omni_speech/train/train_mem.py \
     --bf16 True \
     --output_dir "$CHECKPOINT_DIR" \
     --num_train_epochs 3 \
-    --per_device_train_batch_size 1 \
-    --per_device_eval_batch_size 1 \
-    --gradient_accumulation_steps 1 \
+    --per_device_train_batch_size 4 \
+    --per_device_eval_batch_size 4 \
+    --gradient_accumulation_steps 4 \
     --evaluation_strategy "no" \
     --save_strategy "steps" \
-    --save_steps 500 \
-    --save_total_limit 1 \
+    --save_steps 10000 \
+    --save_total_limit 10 \
     --learning_rate 2e-4 \
     --weight_decay 0. \
     --warmup_ratio 0.03 \
