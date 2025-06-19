@@ -461,6 +461,13 @@ if __name__ == "__main__":
                             base_name = os.path.basename(full_wav_path)
                             output_filename = f"{base_name.replace('.mp3', '.wav').replace('.wav', '')}_output.wav"
                         
+                        # 检查输出文件是否已存在
+                        output_path = os.path.join(args.save_dir, output_filename)
+                        if os.path.exists(output_path):
+                            print(f"跳过第{line_num}行: 输出文件已存在: {output_path}")
+                            processed_count += 1
+                            continue
+                        
                         # 进行推理
                         try:
                             response = vocalnet.__call__(audio_messages, output_filename=output_filename)
@@ -499,6 +506,17 @@ if __name__ == "__main__":
     elif args.query_audio:
         # 单个文件模式
         audio_messages = [{"role": "user", "content": "<speech>","path": args.query_audio}]
+        
+        # 构建输出文件名
+        base_name = os.path.basename(args.query_audio)
+        output_filename = f"{base_name.replace('.mp3', '.wav').replace('.wav', '')}_output.wav"
+        output_path = os.path.join(args.save_dir, output_filename)
+        
+        # 检查输出文件是否已存在
+        if os.path.exists(output_path):
+            print(f"跳过处理: 输出文件已存在: {output_path}")
+            sys.exit(0)
+            
         print("开始单个文件推理...")
         
         response = vocalnet.__call__(audio_messages)
