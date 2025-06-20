@@ -39,7 +39,7 @@ deepspeed --master_port 29602 --include localhost:0,1,2,3 omni_speech/train/trai
     --group_by_modality_length True \
     --bf16 True \
     --output_dir "$CHECKPOINT_DIR" \
-    --num_train_epochs 1 \
+    --num_train_epochs 3 \
     --per_device_train_batch_size 4 \
     --per_device_eval_batch_size 4 \
     --gradient_accumulation_steps 4 \
