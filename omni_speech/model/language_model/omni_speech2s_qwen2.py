@@ -28,7 +28,7 @@ class OmniSpeech2SQwen2ForCausalLM(OmniSpeechQwen2ForCausalLM, GenerationWithCTC
     def __init__(self, config, tokenizer=None):
         super().__init__(config)
         self.tokenizer = tokenizer
-        self.tune_speech_generator_only = True
+        self.tune_speech_generator_only = False
         
         if hasattr(config, "speech_generator_type"):
             self.speech_generator = build_speech_generator(config)
