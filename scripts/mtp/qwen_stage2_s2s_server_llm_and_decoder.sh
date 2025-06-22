@@ -4,7 +4,7 @@ export WANDB_ENTITY="kevin-tutu"
 export WANDB_PROJECT="vocalnet-sft"
 export TOKENIZERS_PARALLELISM=false
 
-CHECKPOINT_NAME="qwen25-7b-instruct-s2s-mtp-ultravoice-all-sft-llm&decoder"
+CHECKPOINT_NAME="qwen25-7b-instruct-s2s-mtp-ultravoice-all-sft-llm-and-decoder"
 CHECKPOINT_DIR="./checkpoints/${CHECKPOINT_NAME}"
 BASE_MODEL="/share/nlp/tuwenming/models/VocalNet/VocalNet-qwen25-7B" 
 DATA_PATH="./playground/ultravoice_all_train_104663.json"
