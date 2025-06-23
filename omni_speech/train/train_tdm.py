@@ -520,7 +520,7 @@ def train(attn_implementation=None):
         padding_side="right",
         use_fast=False,
     )
-
+    pdb.set_trace()
     # Initialize speech modules if speech encoder is used
     if model_args.speech_encoder is not None:
         model.get_model().initialize_speech_modules(
