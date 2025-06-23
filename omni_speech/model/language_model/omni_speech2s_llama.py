@@ -114,7 +114,7 @@ class OmniSpeech2SLlamaForCausalLM(OmniSpeechLlamaForCausalLM, GenerationWithCTC
             self.config.txt_token_num = arconfig.get('txt_token_num', 5)
             self.config.speech_token_num = arconfig.get('speech_token_num', 15)
             self.config.mtp_num = arconfig.get('mtp_num', 5)
-            self.tune_speech_generator_only = getattr(model_args, 'tune_speech_generator_only', True)
+            self.tune_speech_generator_only = getattr(model_args, 'tune_speech_generator_only', False)
 
             self.speech_generator = build_speech_generator(self.config)
         else:
