@@ -23,7 +23,7 @@ echo "Logging to $log_file"
 
 
 deepspeed omni_speech/train/train_mem.py \
-    --lora_enable False \
+    --lora_enable True \
     --deepspeed ./scripts/zero3.json \
     --model_name_or_path $BASE_MODEL \
     --version llama_3 \
