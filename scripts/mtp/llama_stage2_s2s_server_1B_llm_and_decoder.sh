@@ -33,7 +33,7 @@ deepspeed omni_speech/train/train_mem.py \
     --speech_projector_type linear \
     --tune_speech_generator_only False \
     --has_speech_generator True \
-    --mm_tunable_parts "speech_generator, backbone" \
+    --mm_tunable_parts "speech_generator,backbone" \
     --is_multimodal \
     --data_path $DATA_PATH \
     --speech_folder $SPEECH_FOLDER \
