@@ -4,10 +4,10 @@ export WANDB_ENTITY="kevin-tutu"
 export WANDB_PROJECT="vocalnet-sft"
 export TOKENIZERS_PARALLELISM=false
 
-CHECKPOINT_NAME="qwen25-7b-instruct-s2s-mtp-ultravoice-all-sft-llm-and-decoder"
-CHECKPOINT_DIR="./checkpoints/${CHECKPOINT_NAME}"
+CHECKPOINT_NAME="qwen25-7b-instruct-s2s-mtp-ultravoice100k-clean-all-sft-llm-and-decoder"
+CHECKPOINT_DIR="/mnt/buffer/tuwenming/checkpoints/VocalNet/${CHECKPOINT_NAME}"
 BASE_MODEL="/share/nlp/tuwenming/models/VocalNet/VocalNet-qwen25-7B" 
-DATA_PATH="./playground/ultravoice_all_train_104663.json"
+DATA_PATH="./playground/ultravoice100k_all_train_vocalnet.json"
 SPEECH_FOLDER="./playground/"
 SPEECH_ENCODER="/share/nlp/tuwenming/models/openai/whisper-large-v3"
 
