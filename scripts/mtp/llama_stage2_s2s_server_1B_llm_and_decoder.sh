@@ -6,7 +6,7 @@ export WANDB_PROJECT="vocalnet-sft"
 export TOKENIZERS_PARALLELISM=false
 
 CHECKPOINT_NAME="llama32-1B-instruct-s2s-mtp-ultravoice100k-clean-all-sft-llm-and-decoder"
-CHECKPOINT_DIR="/mnt/buffer/tuwenming/checkpoints/VocalNet/${CHECKPOINT_NAME}"
+CHECKPOINT_DIR="./checkpoints/${CHECKPOINT_NAME}"
 BASE_MODEL="/share/nlp/tuwenming/models/VocalNet/VocalNet-1B" 
 DATA_PATH="./playground/ultravoice100k_all_train_vocalnet.json"
 SPEECH_FOLDER="./playground/"
