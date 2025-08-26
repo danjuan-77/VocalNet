@@ -4,8 +4,8 @@ export WANDB_ENTITY="kevin-tutu"
 export WANDB_PROJECT="vocalnet-sft"
 export TOKENIZERS_PARALLELISM=false
 
-CHECKPOINT_NAME="qwen25-7b-instruct-s2s-mtp-ultravoice100k-clean-all-sft-llm-and-decoder"
-CHECKPOINT_DIR="/mnt/buffer/tuwenming/checkpoints/VocalNet/${CHECKPOINT_NAME}"
+CHECKPOINT_NAME="qwen25-7B-instruct-s2s-mtp-ultravoice100k-clean-all-sft-llm-and-decoder-save-steps200"
+CHECKPOINT_DIR="./checkpoints/${CHECKPOINT_NAME}"
 BASE_MODEL="/share/nlp/tuwenming/models/VocalNet/VocalNet-qwen25-7B" 
 DATA_PATH="./playground/ultravoice100k_all_train_vocalnet.json"
 SPEECH_FOLDER="./playground/"
@@ -45,8 +45,8 @@ deepspeed --master_port 29602 --include localhost:0,1,2,3 omni_speech/train/trai
     --gradient_accumulation_steps 4 \
     --evaluation_strategy "no" \
     --save_strategy "steps" \
-    --save_steps 1000 \
-    --save_total_limit 10 \
+    --save_steps 200 \
+    --save_total_limit 50 \
     --learning_rate 2e-4 \
     --weight_decay 0. \
     --warmup_ratio 0.03 \
