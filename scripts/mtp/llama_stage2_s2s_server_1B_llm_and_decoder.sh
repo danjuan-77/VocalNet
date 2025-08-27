@@ -5,7 +5,7 @@ export WANDB_ENTITY="kevin-tutu"
 export WANDB_PROJECT="vocalnet-sft"
 export TOKENIZERS_PARALLELISM=false
 
-CHECKPOINT_NAME="llama32-1B-instruct-s2s-mtp-ultravoice100k-clean-all-sft-llm-and-decoder"
+CHECKPOINT_NAME="llama32-1B-instruct-s2s-mtp-ultravoice100k-clean-all-sft-llm-and-decoder-save-steps200"
 CHECKPOINT_DIR="./checkpoints/${CHECKPOINT_NAME}"
 BASE_MODEL="/share/nlp/tuwenming/models/VocalNet/VocalNet-1B" 
 DATA_PATH="./playground/ultravoice100k_all_train_vocalnet.json"
@@ -47,8 +47,8 @@ deepspeed omni_speech/train/train_mem.py \
     --gradient_accumulation_steps 4 \
     --evaluation_strategy "no" \
     --save_strategy "steps" \
-    --save_steps 1000 \
-    --save_total_limit 10 \
+    --save_steps 200 \
+    --save_total_limit 50 \
     --learning_rate 2e-4 \
     --weight_decay 0. \
     --warmup_ratio 0.03 \
